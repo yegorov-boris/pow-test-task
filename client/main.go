@@ -1,13 +1,16 @@
 package main
 
 import (
+	"client/pow"
 	"context"
 	"fmt"
 	"github.com/gorilla/mux"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
 	"go.uber.org/zap"
+	"io"
 	"net/http"
+	"net/url"
 	"os/signal"
 	"sync"
 	"syscall"
@@ -24,7 +27,9 @@ type (
 		zeros  uint8
 	}
 	Handler struct {
-		logger *zap.SugaredLogger
+		logger    *zap.SugaredLogger
+		serverURL string
+		zeros     uint8
 	}
 )
 
@@ -43,7 +48,7 @@ func newCommand() *cobra.Command {
 		PreRunE: func(cmd *cobra.Command, args []string) error {
 			viper.AutomaticEnv()
 			if err := viper.BindPFlags(cmd.Flags()); err != nil {
-				return fmt.Errorf(`[PaaS registry backend] failed to bind command line arguments: %+v`, err)
+				return fmt.Errorf("failed to bind command line arguments: %+v", err)
 			}
 			return nil
 		},
@@ -51,7 +56,7 @@ func newCommand() *cobra.Command {
 			cfg := newConfig(viper.GetViper())
 			log, _ := zap.NewProduction()
 			slog := log.Sugar()
-			slog.Info(`[client] Starting http-server localhost`)
+			slog.Info(`Starting http-server localhost`)
 			httpServer := newServer(cfg, slog)
 			wg := sync.WaitGroup{}
 			wg.Add(1)
@@ -59,22 +64,22 @@ func newCommand() *cobra.Command {
 
 			go func() {
 				<-ctx.Done()
-				slog.Info("[client] attempting to shutdown gracefully")
+				slog.Info("Attempting to shutdown gracefully")
 				ct, _ := context.WithTimeout(context.Background(), 1*time.Second)
 				_ = httpServer.Shutdown(ct)
 				wg.Done()
 			}()
 
 			go func() {
-				slog.Info(`[client] Serve http-server localhost`)
+				slog.Info(`Serve http-server localhost`)
 				if err := httpServer.ListenAndServe(); err != nil {
-					slog.Errorf(`[client] error while serving: %+v`, err)
+					slog.Errorf(`error while serving: %+v`, err)
 					wg.Done()
 				}
 			}()
 
 			wg.Wait()
-			slog.Infof("[client] clean shutdown")
+			slog.Infof("Clean shutdown")
 
 			return nil
 		},
@@ -99,7 +104,11 @@ func newConfig(viper *viper.Viper) *Config {
 
 func newServer(cfg *Config, logger *zap.SugaredLogger) *http.Server {
 	r := mux.NewRouter()
-	r.Handle(`/`, Handler{logger})
+	r.Handle(`/`, Handler{
+		logger:    logger,
+		serverURL: fmt.Sprintf("http://%s:%s", cfg.server.host, cfg.server.port),
+		zeros:     cfg.zeros,
+	})
 
 	return &http.Server{
 		Addr:    "localhost:80",
@@ -108,8 +117,41 @@ func newServer(cfg *Config, logger *zap.SugaredLogger) *http.Server {
 }
 
 func (h Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
-	_, err := fmt.Fprintf(w, `{"client":"OK"}`)
+	id := url.PathEscape(pow.Generate(h.zeros))
+	res, err := http.Get(fmt.Sprintf("%s/%s", h.serverURL, id))
 	if err != nil {
-		h.logger.Errorf("[server] %+v", err)
+		h.logger.Errorf("error making http request: %+v", err)
+		w.WriteHeader(http.StatusInternalServerError)
+		_, e := fmt.Fprintf(w, "failed to make an http request to the server")
+		if e != nil {
+			h.logger.Errorf("%+v", e)
+		}
+
+		return
+	}
+
+	defer func() {
+		e := res.Body.Close()
+		if e != nil {
+			h.logger.Errorf("%+v", e)
+		}
+	}()
+
+	resBody, err := io.ReadAll(res.Body)
+	if err != nil {
+		h.logger.Errorf("error reading http response: %+v", err)
+		w.WriteHeader(http.StatusInternalServerError)
+		_, e := fmt.Fprintf(w, "failed to read an http response body from the server")
+		if e != nil {
+			h.logger.Errorf("%+v", e)
+		}
+
+		return
+	}
+
+	w.WriteHeader(res.StatusCode)
+	_, err = fmt.Fprintf(w, string(resBody))
+	if err != nil {
+		h.logger.Errorf("%+v", err)
 	}
 }

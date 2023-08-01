@@ -13,8 +13,8 @@ services:
       - "${READ_TIMEOUT}"
       - --server.port
       - "${SERVER_PORT}"
-      - --cache.size
-      - "${CACHE_SIZE}"
+      - --cache.ttl
+      - "${CACHE_TTL}"
       - --zeros
       - "${ZEROS}"
     ports:
