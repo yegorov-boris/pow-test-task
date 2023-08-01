@@ -1,0 +1,37 @@
+version: '3.8'
+
+services:
+  server:
+    build:
+      context: ./server
+    command:
+      - --server.port
+      - "${SERVER_PORT}"
+      - --server.write_timeout
+      - "${WRITE_TIMEOUT}"
+      - --server.read_timeout
+      - "${READ_TIMEOUT}"
+      - --server.port
+      - "${SERVER_PORT}"
+      - --cache.size
+      - "${CACHE_SIZE}"
+      - --zeros
+      - "${ZEROS}"
+    ports:
+      - "${SERVER_PORT}:${SERVER_PORT}"
+    network_mode: host
+  client:
+    depends_on:
+      - server
+    build:
+      context: ./client
+    command:
+      - --server.host
+      - "${SERVER_HOST}"
+      - --server.port
+      - "${SERVER_PORT}"
+      - --zeros
+      - "${ZEROS}"
+    ports:
+      - "80:80"
+    network_mode: host
