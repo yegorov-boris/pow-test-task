@@ -43,10 +43,10 @@ func (c *Checker) Run(done <-chan struct{}) {
 	}()
 }
 
-func (c *Checker) IsUniq(id []byte) bool {
-	_, uniq := c.cache.LoadOrStore(string(id), time.Now())
+func (c *Checker) RecentlyUsed(id []byte) bool {
+	_, found := c.cache.LoadOrStore(string(id), time.Now())
 
-	return uniq
+	return found
 }
 
 func (c *Checker) CheckPoW(zeros uint8, hashSum []byte) bool {

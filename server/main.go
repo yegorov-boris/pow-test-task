@@ -173,7 +173,7 @@ func (h Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if h.checker.CheckPoW(h.zeros, idB) {
-		if !h.checker.IsUniq(idB) {
+		if h.checker.RecentlyUsed(idB) {
 			w.WriteHeader(http.StatusTooManyRequests)
 			_, e := fmt.Fprintf(w, "this PoW has been recently used, please try again")
 			if e != nil {
