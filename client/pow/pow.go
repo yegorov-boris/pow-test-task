@@ -3,29 +3,25 @@ package pow
 import (
 	"crypto/sha1"
 	"encoding/base64"
+	"github.com/pkg/errors"
 	"math/rand"
 )
 
-func Generate(zeros uint8) string {
-	n := 12
-	id := make([]byte, n+4)
-	for i := 0; i < n; i++ {
-		id[i] = byte(rand.Intn(256))
-	}
-
-	var counter uint32 = 0
+func Generate(zeros uint8) (string, error) {
+	id := make([]byte, 16)
 	hasher := sha1.New()
-	for {
-		for i := 0; i < 4; i++ {
-			id[n+3-i] = byte((counter >> (8 * i)) % 256)
+	n := 1 << 25
+	for i := 0; i < n; i++ {
+		if _, err := rand.Read(id); err != nil {
+			return "", errors.Wrap(err, "failed to generate random ID")
 		}
 
 		if check(zeros, hasher.Sum(id)) {
-			return base64.StdEncoding.EncodeToString(id)
+			return base64.StdEncoding.EncodeToString(id), nil
 		}
-
-		counter++
 	}
+
+	return "", errors.New("PoW ran out of time")
 }
 
 func check(zeros uint8, hashSum []byte) bool {

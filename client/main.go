@@ -118,7 +118,17 @@ func newServer(cfg *Config, logger *zap.SugaredLogger) *http.Server {
 
 func (h Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	h.logger.Info("----- generating")
-	id := pow.Generate(h.zeros)
+	id, err := pow.Generate(h.zeros)
+	if err != nil {
+		h.logger.Errorf("error generating ID: %+v", err)
+		w.WriteHeader(http.StatusInternalServerError)
+		_, e := fmt.Fprintf(w, "failed to compute a Proof of Work challenge, please try again")
+		if e != nil {
+			h.logger.Errorf("%+v", e)
+		}
+
+		return
+	}
 	h.logger.Infof("====== generated %s", id)
 	id = url.QueryEscape(id)
 	reqURL := fmt.Sprintf("%s/pow?id=%s", h.serverURL, id)
