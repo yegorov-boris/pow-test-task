@@ -85,7 +85,7 @@ func newCommand() *cobra.Command {
 		},
 	}
 
-	cmd.Flags().String(`server.host`, `localhost`, `Server host`)
+	cmd.Flags().String(`server.host`, `http://localhost`, `Server host`)
 	cmd.Flags().String(`server.port`, `8080`, `Server port`)
 	cmd.Flags().Uint(`zeros`, 20, `Length of the hash zeros prefix`)
 
@@ -104,9 +104,9 @@ func newConfig(viper *viper.Viper) *Config {
 
 func newServer(cfg *Config, logger *zap.SugaredLogger) *http.Server {
 	r := mux.NewRouter()
-	r.Handle(`/`, Handler{
+	r.Handle("/pow", Handler{
 		logger:    logger,
-		serverURL: fmt.Sprintf("http://%s:%s", cfg.server.host, cfg.server.port),
+		serverURL: fmt.Sprintf("%s:%s", cfg.server.host, cfg.server.port),
 		zeros:     cfg.zeros,
 	})
 
@@ -117,8 +117,13 @@ func newServer(cfg *Config, logger *zap.SugaredLogger) *http.Server {
 }
 
 func (h Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
-	id := url.PathEscape(pow.Generate(h.zeros))
-	res, err := http.Get(fmt.Sprintf("%s/%s", h.serverURL, id))
+	h.logger.Info("----- generating")
+	id := pow.Generate(h.zeros)
+	h.logger.Infof("====== generated %s", id)
+	id = url.QueryEscape(id)
+	reqURL := fmt.Sprintf("%s/pow?id=%s", h.serverURL, id)
+	h.logger.Info(reqURL)
+	res, err := http.Get(reqURL)
 	if err != nil {
 		h.logger.Errorf("error making http request: %+v", err)
 		w.WriteHeader(http.StatusInternalServerError)

@@ -8,23 +8,23 @@ import (
 
 func Generate(zeros uint8) string {
 	n := 12
-	id := make([]byte, n+1)
+	id := make([]byte, n+4)
 	for i := 0; i < n; i++ {
 		id[i] = byte(rand.Intn(256))
 	}
 
-	id[n] = 0
+	var counter uint32 = 0
 	hasher := sha1.New()
 	for {
+		for i := 0; i < 4; i++ {
+			id[n+3-i] = byte((counter >> (8 * i)) % 256)
+		}
+
 		if check(zeros, hasher.Sum(id)) {
 			return base64.StdEncoding.EncodeToString(id)
 		}
-		if id[n] == 255 {
-			id = append(id, 0)
-			n++
-		} else {
-			id[n]++
-		}
+
+		counter++
 	}
 }
 

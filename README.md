@@ -34,7 +34,7 @@ Another pro of SHA-1 is its uniform distribution. It makes PoW almost equal amou
 
 ## how to test locally
 
-Open localhost in your browser.
+Open [localhost/pow](localhost/pow) in your browser.
 
 To tune the client and server, edit `.env`.
 

@@ -10,7 +10,6 @@ import (
 	"github.com/spf13/viper"
 	"go.uber.org/zap"
 	"net/http"
-	"net/url"
 	"os/signal"
 	"server/check"
 	"server/quotes"
@@ -134,7 +133,7 @@ func newServer(
 	quoteGen *quotes.Generator,
 ) *http.Server {
 	r := mux.NewRouter()
-	r.Handle(`/{id}`, Handler{
+	r.Handle(`/pow`, Handler{
 		logger:   logger,
 		zeros:    cfg.zeros,
 		quoteGen: quoteGen,
@@ -150,23 +149,11 @@ func newServer(
 }
 
 func (h Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
-	id := mux.Vars(r)["id"]
-	h.logger.Infof("id: %s", id)
-	idLength := len(id)
-	if idLength < 13 || idLength > 16 {
+	idBase64 := r.URL.Query().Get("id")
+	h.logger.Infof("id: %s", idBase64)
+	if len(idBase64) != 24 {
 		w.WriteHeader(http.StatusBadRequest)
 		_, e := fmt.Fprintf(w, "invalid ID")
-		if e != nil {
-			h.logger.Errorf("%+v", e)
-		}
-
-		return
-	}
-
-	idBase64, err := url.PathUnescape(id)
-	if err != nil {
-		w.WriteHeader(http.StatusInternalServerError)
-		_, e := fmt.Fprintf(w, "failed to decode PoW from URL on the server")
 		if e != nil {
 			h.logger.Errorf("%+v", e)
 		}

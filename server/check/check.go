@@ -44,7 +44,7 @@ func (c *Checker) Run(done <-chan struct{}) {
 }
 
 func (c *Checker) IsUniq(id []byte) bool {
-	_, uniq := c.cache.LoadOrStore(id, time.Now())
+	_, uniq := c.cache.LoadOrStore(string(id), time.Now())
 
 	return uniq
 }
