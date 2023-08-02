@@ -12,7 +12,7 @@ type Generator struct {
 }
 
 func NewGenerator() (*Generator, error) {
-	readFile, err := os.OpenFile("quotes.txt", os.O_RDONLY, 0744)
+	readFile, err := os.Open("/usr/local/quotes.txt")
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to open the quotes file")
 	}

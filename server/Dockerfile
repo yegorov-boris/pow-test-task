@@ -9,6 +9,7 @@ RUN go mod vendor \
 
 FROM alpine:3.18 as image
 COPY --from=build-binary /project/bin/server /usr/local/bin/server
+COPY --from=build-binary /project/quotes.txt /usr/local
 RUN apk --no-cache add ca-certificates \
     && chmod +x /usr/local/bin/server
 ENTRYPOINT ["/usr/local/bin/server"]

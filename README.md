@@ -26,6 +26,8 @@ I'm sure a better (fair) PoW algorithm exists, but I haven't found it.
 
 A pro of Hashcash is that its PoW can be easily made harder or easier changing the number of zeros.
 
+Another pro of SHA-1 is its uniform distribution. It makes PoW almost equal amount of computations for different participants.
+
 ## local installation
 
 `docker-compose up`

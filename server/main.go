@@ -151,10 +151,11 @@ func newServer(
 
 func (h Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	id := mux.Vars(r)["id"]
+	h.logger.Infof("id: %s", id)
 	idLength := len(id)
 	if idLength < 13 || idLength > 16 {
 		w.WriteHeader(http.StatusBadRequest)
-		_, e := fmt.Fprintf(w, "failed to decode PoW from URL on the server")
+		_, e := fmt.Fprintf(w, "invalid ID")
 		if e != nil {
 			h.logger.Errorf("%+v", e)
 		}
